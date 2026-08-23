@@ -1,8 +1,8 @@
 // ===== КОНФИГУРАЦИЯ GITHUB API =====
 // ЗАМЕНИТЕ ЭТИ ЗНАЧЕНИЯ НА СВОИ ПОСЛЕ СОЗДАНИЯ РЕПОЗИТОРИЯ
-const REPO_OWNER = 'YOUR_GITHUB_USERNAME'; // Ваш логин на GitHub
-const REPO_NAME = 'logres-kingdom-loot';   // Имя репозитория
-const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN';  // Ваш Personal Access Token с правами repo
+const REPO_OWNER = 'hakar74'; // Ваш логин на GitHub
+const REPO_NAME = 'TLRBLogresKingdom.github.io';   // Имя репозитория
+const GITHUB_TOKEN = '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';  // Ваш Personal Access Token с правами repo
 const BRANCH_NAME = 'main';                // Имя основной ветки (main или master)
 
 // Путь к файлу данных
