@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Алтарь администратора — Logres Kingdom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЗВЁЗДНОЕ ПОЛОТНО -->
+    <canvas id="starfield"></canvas>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="content">
+        <!-- НАВИГАЦИЯ -->
+        <nav class="nav-bar">
+            <a href="index.html">📜 Манифест</a>
+            <a href="table.html">⚔️ Таблица лута</a>
+            <a href="queue.html">🐉 Очереди</a>
+            <a href="admin.html">🏛️ Админка</a>
+        </nav>
+
+        <!-- ЗАГОЛОВОК -->
+        <div class="page-title">
+            <h1>🏛️ Алтарь администратора</h1>
+            <div class="quote">Только избранные имеют доступ к рунам управления</div>
+        </div>
+
+        <!-- ФОРМА ВХОДА ДЛЯ АДМИНА -->
+        <div id="adminLogin" class="modal-overlay">
+            <div class="modal">
+                <h2>🔐 Печать доступа</h2>
+                <p style="margin-bottom: 20px; color: #bfa67a;">Лишь верховный жрец может изменять руны бытия</p>
+                <input type="password" id="adminPassword" placeholder="Введи пароль..." style="width: 100%; padding: 15px 20px; font-family: 'Cinzel', serif; font-size: 1.1rem; background: rgba(10, 10, 15, 0.8); border: 1px solid var(--gold); border-radius: 8px; color: var(--text-light); margin-bottom: 20px; text-align: center; letter-spacing: 2px;">
+                <div id="adminError" class="modal-error">Неверная печать. Доступ запрещён.</div>
+                <button class="btn-epic" onclick="checkAdminPassword()">Отворить врата</button>
+            </div>
+        </div>
+
+        <!-- АДМИН-ПАНЕЛЬ (скрыта до ввода пароля) -->
+        <div id="adminPanel" style="display: none;">
+            
+            <!-- РАЗДЕЛ 1: УЧАСТНИКИ -->
+            <div class="admin-section">
+                <h3>👥 Души воинов</h3>
+                <textarea id="membersInput" placeholder="Впиши ники воинов (по одному на строку), дабы призвать их в ряды Logres..."></textarea>
+                <button class="btn-epic" onclick="addMembers()" style="padding: 12px 30px; font-size: 1rem;">✡ Призвать</button>
+                
+                <div style="margin-top: 25px;">
+                    <h4 style="color: #f0d080; margin-bottom: 15px;">Ныне служащие Logres:</h4>
+                    <ul id="membersList" class="admin-list"></ul>
+                </div>
+            </div>
+
+            <!-- РАЗДЕЛ 2: ПРЕДМЕТЫ -->
+            <div class="admin-section">
+                <h3>💎 Реликвии (предметы)</h3>
+                <div id="bossesContainer"></div>
+                
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-gold);">
+                    <h4 style="color: #f0d080; margin-bottom: 15px;">Создать новый артефакт</h4>
+                    <select id="newBossSelect" style="padding: 10px; font-family: 'Cinzel'; background: rgba(10,10,15,0.8); border: 1px solid var(--gold); color: var(--text-light); margin-right: 10px;">
+                        <!-- Заполняется JS -->
+                    </select>
+                    <input type="text" id="newItemName" placeholder="Название артефакта..." 
+                           style="padding: 10px; font-family: 'Cinzel'; background: rgba(10,10,15,0.8); border: 1px solid var(--gold); color: var(--text-light); width: 300px;">
+                    <button class="btn-small" onclick="addItem()" style="margin-left: 10px;">➕ Создать артефакт</button>
+                </div>
+            </div>
+
+            <!-- РАЗДЕЛ 3: ЗАМОРОЗКИ -->
+            <div class="admin-section">
+                <h3>❄️ Печати (заморозки)</h3>
+                <ul id="freezesList" class="admin-list"></ul>
+            </div>
+
+            <!-- РАЗДЕЛ 4: ОЧИЩЕНИЕ -->
+            <div class="admin-section" style="border-color: #ff6b6b;">
+                <h3 style="color: #ff6b6b;">🔥 Обряд очищения</h3>
+                <p style="color: #bfa67a; margin-bottom: 20px;">
+                    Сие действие сотрёт все заявки из Книги Судеб. Заморозки останутся нетронутыми.
+                </p>
+                <button class="btn-epic" onclick="clearBids()" style="background: linear-gradient(135deg, #ff6b6b, #ff8e8e);">☠ Стереть все заявки</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- СКРИПТЫ -->
+    <script src="script.js"></script>
+    <script>
+        let currentData = null;
+        const ADMIN_PASSWORD = 'admin123';
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initStarfield();
+            await loadData();
+        });
+
+        // ===== ЗВЁЗДНЫЙ ФОН =====
+        async function initStarfield() {
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            const stars = [];
+            const STAR_COUNT = 300;
+
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.8 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    speed: Math.random() * 0.02 + 0.005,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let s of stars) {
+                    const flicker = 0.6 + 0.4 * Math.sin(time * s.speed * 2 + s.phase);
+                    const alpha = s.alpha * flicker;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 240, 200, ${alpha})`;
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                }
+
+                for (let i = 0; i < 8; i++) {
+                    const x = (i * 137 + 50) % canvas.width;
+                    const y = (i * 251 + 30) % canvas.height;
+                    const r = 2.5 + Math.sin(time * 0.01 + i) * 0.8;
+                    const a = 0.3 + 0.3 * Math.sin(time * 0.02 + i * 1.7);
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(212, 175, 55, ${a})`;
+                    ctx.shadowColor = 'rgba(212, 175, 55, 0.6)';
+                    ctx.shadowBlur = 25;
+                    ctx.fill();
+                }
+                requestAnimationFrame(drawStars);
+            }
+
+            drawStars(0);
+        }
+
+        // ===== ЗАГРУЗКА ДАННЫХ =====
+        async function loadData() {
+            currentData = await getData();
+            if (!currentData) return;
+
+            renderMembersList();
+            renderBossesItems();
+            renderFreezesList();
+            renderNewBossSelect();
+        }
+
+        // ===== ПРОВЕРКА ПАРОЛЯ =====
+        function checkAdminPassword() {
+            const password = document.getElementById('adminPassword').value;
+            const errorEl = document.getElementById('adminError');
+
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('adminLogin').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                showNotification('🏛️ Добро пожаловать, верховный жрец!');
+            } else {
+                errorEl.textContent = 'Неверная печать. Доступ запрещён.';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Обработка Enter в поле пароля
+        document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkAdminPassword();
+            }
+        });
+
+        // ===== РЕНДЕР СПИСКА УЧАСТНИКОВ =====
+        function renderMembersList() {
+            const list = document.getElementById('membersList');
+            const members = currentData.members || [];
+
+            if (members.length === 0) {
+                list.innerHTML = '<li style="color: #8f8060;">Пока нет призванных воинов</li>';
+                return;
+            }
+
+            list.innerHTML = members.map(member => `
+                <li class="admin-list-item">
+                    <span>${member}</span>
+                    <button class="btn-small" onclick="removeMember('${member}')" style="border-color: #ff6b6b; color: #ff6b6b;">Изгнать</button>
+                </li>
+            `).join('');
+        }
+
+        // ===== ДОБАВЛЕНИЕ УЧАСТНИКОВ =====
+        async function addMembers() {
+            const textarea = document.getElementById('membersInput');
+            const nicks = textarea.value.split('\n').map(n => n.trim()).filter(n => n);
+
+            if (nicks.length === 0) {
+                showNotification('Впиши хотя бы один ник...');
+                return;
+            }
+
+            // Добавляем только уникальные ники (регистронезависимо)
+            const existingLower = (currentData.members || []).map(m => m.toLowerCase());
+            const newMembers = nicks.filter(nick => !existingLower.includes(nick.toLowerCase()));
+
+            if (newMembers.length === 0) {
+                showNotification('Все эти души уже служат Logres');
+                return;
+            }
+
+            if (!currentData.members) currentData.members = [];
+            currentData.members.push(...newMembers);
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification(`✨ Призвано ${newMembers.length} новых воинов!`);
+                textarea.value = '';
+                await loadData();
+            }
+        }
+
+        // ===== УДАЛЕНИЕ УЧАСТНИКА =====
+        async function removeMember(nick) {
+            if (!confirm(`Изгнать ${nick} из рядов Logres?`)) return;
+
+            currentData.members = currentData.members.filter(m => m !== nick);
+            
+            // Также удаляем его заявки
+            Object.keys(currentData.bids || {}).forEach(itemId => {
+                if (currentData.bids[itemId][nick]) {
+                    delete currentData.bids[itemId][nick];
+                }
+            });
+
+            // Удаляем из заморозок
+            if (currentData.freezes) {
+                currentData.freezes = currentData.freezes.filter(f => f !== nick);
+            }
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification(`Воин ${nick} изгнан из Logres`);
+                await loadData();
+            }
+        }
+
+        // ===== РЕНДЕР ПРЕДМЕТОВ БОССОВ =====
+        function renderBossesItems() {
+            const container = document.getElementById('bossesContainer');
+            let html = '';
+
+            Object.keys(currentData.bosses).forEach(bossKey => {
+                const boss = currentData.bosses[bossKey];
+                
+                html += `<div style="margin-bottom: 25px; padding: 15px; background: rgba(10,10,15,0.4); border-radius: 8px;">`;
+                html += `<h4 style="color: var(--gold); margin-bottom: 15px;">${boss.name}</h4>`;
+
+                boss.items.forEach((item, itemIndex) => {
+                    html += `
+                        <div class="item-row">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect fill='%231a1a2e' width='50' height='50'/%3E%3Ctext x='25' y='30' text-anchor='middle' fill='%23d4af37' font-size='10'%3E${boss.name[0]}%3C/text%3E%3C/svg%3E" alt="icon">
+                            <input type="text" value="${item}" onchange="updateItemName('${bossKey}', ${itemIndex}, this.value)" 
+                                   style="flex: 1; padding: 8px 12px; font-family: 'Cinzel'; background: rgba(10,10,15,0.8); border: 1px solid var(--gold); border-radius: 5px; color: var(--text-light);">
+                            <button class="btn-small" onclick="removeItem('${bossKey}', ${itemIndex})" style="border-color: #ff6b6b; color: #ff6b6b;">Удалить</button>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ===== РЕНДЕР ВЫБОРА БОССА ДЛЯ НОВОГО ПРЕДМЕТА =====
+        function renderNewBossSelect() {
+            const select = document.getElementById('newBossSelect');
+            select.innerHTML = Object.keys(currentData.bosses).map(key => 
+                `<option value="${key}">${currentData.bosses[key].name}</option>`
+            ).join('');
+        }
+
+        // ===== ОБНОВЛЕНИЕ НАЗВАНИЯ ПРЕДМЕТА =====
+        async function updateItemName(bossKey, itemIndex, newName) {
+            if (!newName.trim()) {
+                showNotification('Название не может быть пустым');
+                await loadData(); // Возвращаем старое название
+                return;
+            }
+
+            currentData.bosses[bossKey].items[itemIndex] = newName;
+            
+            // Обновляем ключи в bids
+            const oldItemId = `${bossKey}_${currentData.bosses[bossKey].items[itemIndex].replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const newItemId = `${bossKey}_${newName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            if (currentData.bids && currentData.bids[oldItemId]) {
+                currentData.bids[newItemId] = currentData.bids[oldItemId];
+                delete currentData.bids[oldItemId];
+            }
+
+            const success = await saveData(currentData);
+            if (success) {
+                console.log('Название предмета обновлено');
+            }
+        }
+
+        // ===== УДАЛЕНИЕ ПРЕДМЕТА =====
+        async function removeItem(bossKey, itemIndex) {
+            const item = currentData.bosses[bossKey].items[itemIndex];
+            if (!confirm(`Удалить артефакт "${item}"?`)) return;
+
+            currentData.bosses[bossKey].items.splice(itemIndex, 1);
+
+            // Удаляем заявки на этот предмет
+            const itemId = `${bossKey}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            if (currentData.bids && currentData.bids[itemId]) {
+                delete currentData.bids[itemId];
+            }
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification(`Артефакт "${item}" удалён из анналов`);
+                await loadData();
+            }
+        }
+
+        // ===== ДОБАВЛЕНИЕ НОВОГО ПРЕДМЕТА =====
+        async function addItem() {
+            const bossKey = document.getElementById('newBossSelect').value;
+            const itemName = document.getElementById('newItemName').value.trim();
+
+            if (!itemName) {
+                showNotification('Впиши название артефакта');
+                return;
+            }
+
+            currentData.bosses[bossKey].items.push(itemName);
+            document.getElementById('newItemName').value = '';
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification(`Артефакт "${itemName}" добавлен в сокровищницу ${currentData.bosses[bossKey].name}`);
+                await loadData();
+            }
+        }
+
+        // ===== РЕНДЕР СПИСКА ЗАМОРОЗОК =====
+        function renderFreezesList() {
+            const list = document.getElementById('freezesList');
+            const freezes = currentData.freezes || [];
+
+            if (freezes.length === 0) {
+                list.innerHTML = '<li style="color: #8f8060;">Нет активных печатей</li>';
+                return;
+            }
+
+            list.innerHTML = freezes.map(nick => `
+                <li class="admin-list-item">
+                    <span>❄ ${nick}</span>
+                    <button class="btn-small" onclick="removeFreeze('${nick}')">Снять печать</button>
+                </li>
+            `).join('');
+        }
+
+        // ===== СНЯТИЕ ЗАМОРОЗКИ =====
+        async function removeFreeze(nick) {
+            currentData.freezes = currentData.freezes.filter(f => f !== nick);
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification(`Цепи пали. Дух ${nick} вновь свободен.`);
+                await loadData();
+            }
+        }
+
+        // ===== ОЧИСТКА ВСЕХ ЗАЯВОК =====
+        async function clearBids() {
+            if (!confirm('⚠️ СИЕ ДЕЙСТВИЕ СТРЁТ ВСЕ ЗАЯВКИ ИЗ КНИГИ СУДЕБ! Продолжить?')) return;
+
+            currentData.bids = {};
+
+            const success = await saveData(currentData);
+            if (success) {
+                showNotification('🔥 Все заявки стёрты. Книги Судеб пусты.');
+                await loadData();
+            }
+        }
+    </script>
+</body>
+</html>

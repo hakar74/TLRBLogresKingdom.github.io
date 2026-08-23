@@ -1,0 +1,68 @@
+name: Очистка заявок Logres Kingdom
+
+on:
+  schedule:
+    # Каждую пятницу в 00:00 UTC
+    - cron: '0 0 * * 5'
+  workflow_dispatch: # Возможность ручного запуска
+
+jobs:
+  clear-bids:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v3
+      
+      - name: Настроить Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Загрузить текущие данные
+        id: get-data
+        run: |
+          if [ -f data.json ]; then
+            echo "data_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "data_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Очистить заявки (если файл существует)
+        if: steps.get-data.outputs.data_exists == 'true'
+        run: |
+          # Используем Python для обработки JSON
+          python3 << 'EOF'
+          import json
+          
+          # Читаем текущие данные
+          with open('data.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+          
+          # Очищаем только bids, оставляем freezes нетронутыми
+          original_freezes = data.get('freezes', [])
+          data['bids'] = {}
+          data['freezes'] = original_freezes
+          
+          # Сохраняем обратно
+          with open('data.json', 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+          
+          print("✅ Заявки очищены. Заморозки сохранены.")
+          EOF
+      
+      - name: Создать commit с изменениями
+        run: |
+          if [ -f data.json ]; then
+            git add data.json
+            git commit -m "🔄 Еженедельная очистка заявок [automated]" || echo "Нет изменений для коммита"
+            git push
+          fi
+      
+      - name: Уведомление о результате
+        run: |
+          echo "==================================="
+          echo "✅ Обряд очищения завершён!"
+          echo "Все заявки стёрты из Книги Судеб."
+          echo "Заморозки остались нетронутыми."
+          echo "==================================="
