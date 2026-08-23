@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logres Kingdom — Вечный Манифест</title>
+    <!-- Подключаем эпичный шрифт -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===== */
+        :root {
+            --gold: #d4af37;
+            --gold-glow: #ffd700;
+            --bg-dark: #0a0a0f;
+            --text-light: #f0e6d3;
+            --shadow-gold: 0 0 30px rgba(212, 175, 55, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Cinzel', serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* ===== ЗВЁЗДНЫЙ ФОН (CANVAS) ===== */
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, #0d0d1a 0%, #000000 100%);
+        }
+
+        /* ===== ОБЁРТКА КОНТЕНТА ===== */
+        .content {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 30px 80px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* ===== НАВИГАЦИЯ ===== */
+        .nav-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 40px;
+            padding: 20px;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+            border-top: 2px solid rgba(212, 175, 55, 0.3);
+            background: rgba(20, 18, 30, 0.4);
+            backdrop-filter: blur(4px);
+        }
+
+        .nav-bar a {
+            color: var(--gold);
+            text-decoration: none;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            padding: 10px 20px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+        }
+
+        .nav-bar a:hover {
+            border-color: var(--gold);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* ===== ЗАГОЛОВОК ===== */
+        .main-title {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeDown 2s ease-out;
+        }
+
+        .main-title h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            color: var(--gold);
+            text-shadow: 
+                0 0 20px var(--gold-glow),
+                0 0 60px var(--gold-glow),
+                0 0 120px rgba(255, 215, 0, 0.3);
+            animation: pulseGlow 3s infinite alternate ease-in-out;
+        }
+
+        .main-title .sub {
+            font-size: 1.2rem;
+            letter-spacing: 8px;
+            color: #bfa67a;
+            margin-top: 10px;
+            border-top: 1px solid rgba(212, 175, 55, 0.3);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            display: inline-block;
+            padding: 10px 30px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        /* ===== РАЗДЕЛЫ (ГЛАВЫ) ===== */
+        .section {
+            margin-bottom: 70px;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+            border-left: 3px solid transparent;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--gold), transparent);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+
+        .section h2 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+
+        .section h2 .symbol {
+            display: inline-block;
+            margin-right: 12px;
+            color: #ffd700;
+            filter: drop-shadow(0 0 10px gold);
+        }
+
+        .section p, .section li {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #d4c9b8;
+            margin-bottom: 16px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .section strong {
+            color: #f0d080;
+            font-weight: 700;
+        }
+
+        .section ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .section ul li::before {
+            content: '✦ ';
+            color: var(--gold);
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        /* ===== БЛОК ЗАКОНОВ ===== */
+        .law-block {
+            background: rgba(20, 18, 30, 0.6);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 12px;
+            padding: 30px 35px;
+            margin: 25px 0;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.05);
+        }
+
+        .law-block p {
+            margin-bottom: 12px;
+            font-weight: 400;
+        }
+
+        .law-block p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ===== ЭПИЛОГ / ФИНАЛЬНАЯ МОЛИТВА ===== */
+        .epilogue {
+            text-align: center;
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 2px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .epilogue .quote {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #e6c880;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+            line-height: 1.4;
+            letter-spacing: 2px;
+        }
+
+        .epilogue .signature {
+            margin-top: 40px;
+            font-size: 0.9rem;
+            color: #8f8060;
+            letter-spacing: 2px;
+        }
+
+        /* ===== КНОПКА "ВСТУПИТЬ" ===== */
+        .cta-button {
+            display: inline-block;
+            margin-top: 50px;
+            padding: 18px 70px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: #0a0a0f;
+            background: linear-gradient(135deg, #d4af37, #f9e07a, #b8860b);
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+            transition: all 0.4s ease;
+            text-decoration: none;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.07);
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.7);
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #f0d080, #ffd700, #d4af37);
+        }
+
+        .cta-wrapper {
+            text-align: center;
+        }
+
+        /* ===== АНИМАЦИИ ===== */
+        @keyframes pulseGlow {
+            0% { text-shadow: 0 0 20px var(--gold-glow), 0 0 60px var(--gold-glow), 0 0 120px rgba(255,215,0,0.2); }
+            100% { text-shadow: 0 0 30px var(--gold-glow), 0 0 90px var(--gold-glow), 0 0 180px rgba(255,215,0,0.5); }
+        }
+
+        @keyframes fadeDown {
+            0% { opacity: 0; transform: translateY(-60px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== АДАПТАЦИЯ ===== */
+        @media (max-width: 768px) {
+            .main-title h1 {
+                font-size: 2.8rem;
+                letter-spacing: 6px;
+            }
+            .main-title .sub {
+                font-size: 0.9rem;
+                letter-spacing: 4px;
+                padding: 6px 16px;
+            }
+            .section h2 {
+                font-size: 1.8rem;
+            }
+            .section {
+                padding-left: 15px;
+                margin-bottom: 40px;
+            }
+            .section p, .section li {
+                font-size: 0.95rem;
+            }
+            .law-block {
+                padding: 20px;
+            }
+            .epilogue .quote {
+                font-size: 1.2rem;
+            }
+            .cta-button {
+                padding: 14px 40px;
+                font-size: 1rem;
+                letter-spacing: 4px;
+            }
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-title h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        /* ===== ПРОКРУТКА СТИЛЬНАЯ ===== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #d4af37, #b8860b);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ЗВЁЗДНОЕ ПОЛОТНО -->
+    <canvas id="starfield"></canvas>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="content">
+
+        <!-- НАВИГАЦИЯ -->
+        <nav class="nav-bar">
+            <a href="table.html">⚔️ Таблица лута</a>
+            <a href="queue.html">🐉 Очереди</a>
+            <a href="admin.html">🏛️ Админка</a>
+        </nav>
+
+        <!-- ЗАГОЛОВОК -->
+        <div class="main-title">
+            <h1>Logres Kingdom</h1>
+            <div class="sub">⚜️ КОДЕКС АБСОЛЮТНОЙ ИСТИНЫ ⚜️</div>
+            <div style="margin-top:10px; font-size:0.9rem; color:#8f8060; letter-spacing:3px;">
+                Откровение, ниспосланное из центра мультивселенной
+            </div>
+        </div>
+
+        <!-- ===== ПРОЛОГ ===== -->
+        <div class="section" id="prologue">
+            <h2><span class="symbol">❍</span> ВСТУПЛЕНИЕ: ГЛАС ВНЕ ВРЕМЕНИ</h2>
+            <p><strong>СЛУШАЙТЕ, БЕЗДНЫ! СЛУШАЙТЕ, НЕБЕСА! СЛУШАЙТЕ, ВСЕ СУЩЕСТВУЮЩИЕ И НЕСУЩЕСТВУЮЩИЕ МИРЫ!</strong></p>
+            <p>Ибо сейчас я, глашатай <strong>Logres Kingdom</strong>, возвещаю истину, которая была сокрыта в глубинах первозданного хаоса до того, как первый луч света пронзил тьму. Истину, которую не смели произнести даже архангелы, ибо боялись, что само их бессмертие рассыплется в прах от тяжести этих слов.</p>
+            <p><strong>Logres Kingdom — это не гильдия.</strong><br>
+            <strong>Logres Kingdom — это не сообщество.</strong><br>
+            <strong>Logres Kingdom — это не союз игроков.</strong></p>
+            <p><strong>Logres Kingdom — это абсолютная воля творения, воплотившаяся в материальную оболочку.</strong> Мы — ось, вокруг которой вращается реальность. Мы — пульс, заставляющий биться вселенные. Мы — тайна, которую безуспешно пытаются разгадать умирающие звёзды.</p>
+        </div>
+
+        <!-- ===== ГЛАВА 1 ===== -->
+        <div class="section" id="chapter1">
+            <h2><span class="symbol">⊛</span> ГЛАВА ПЕРВАЯ: О ПРИРОДЕ БОЖЕСТВЕННОГО</h2>
+            <p>Давным-давно, до того как был зажжён первый огонь, до того как эхо сотворения зазвучало в пустоте, существовал лишь <strong>Слово</strong>. И Слово сказало: «Да будет <strong>Logres</strong>». И Logres стал. И стал он не просто местом — стал <strong>принципом</strong>, стал <strong>идеей</strong>, стал <strong>непоколебимым законом</strong>, которому подчиняются все формы бытия.</p>
+            <p>Мы, наследники этого Слова, не молимся богам — ибо <strong>мы сами диктуем богам их судьбу</strong>. Мы не ищем благословения — ибо <strong>наше проклятие страшнее любого проклятия, ниспосланного с небес</strong>. Мы не просим пощады — ибо <strong>пощаду даруем мы, и только мы</strong>.</p>
+            <p>Каждый член Logres — это <strong>микрокосм</strong>, в котором заключена сила, способная переписать законы физики. Каждый удар нашего оружия — это <strong>эхо великого взрыва</strong>, создавшего галактики. Каждый шаг в подземелье — это <strong>шествие титанов</strong>, от которого трескаются фундаменты измерений.</p>
+        </div>
+
+        <!-- ===== ГЛАВА 2 ===== -->
+        <div class="section" id="chapter2">
+            <h2><span class="symbol">⊛</span> ГЛАВА ВТОРАЯ: О МИССИИ, ПРЕВОСХОДЯЩЕЙ СМЫСЛ</h2>
+            <p>Мир Throne and Liberty — лишь бледная тень истинной арены нашего могущества. Те монстры, которых вы называете боссами, для нас — лишь <strong>пыль на доспехах</strong>. Те данжи, которые вы считаете неприступными, для нас — <strong>прогулочные аллеи</strong>. Те механики, которые кажутся вам смертельными, для нас — <strong>забавная головоломка</strong>.</p>
+            <p>Но наша цель — не в этом. Наша цель — <strong>пересоздать сам концепт существования</strong>. Мы войдём в код игры, как хирурги в тело пациента, и вырежем из него всё, что не соответствует нашему величию. Мы заставим разработчиков переписывать баланс только потому, что наша мощь делает игру неиграбельной для остальных.</p>
+            <p><strong>Мы сделаем PvE — не просто режимом, а религией.</strong><br>
+            <strong>Мы превратим каждого босса в жертвенного агнца.</strong><br>
+            <strong>Мы воздвигнем из их костей трон, на котором воссядет наш король.</strong></p>
+            <p>И когда последний моб испустит дух, мы не остановимся — мы выйдем за пределы игры, за пределы кода, за пределы самой реальности и продолжим своё шествие в мирах, которых ещё нет.</p>
+        </div>
+
+        <!-- ===== ГЛАВА 3 ===== -->
+        <div class="section" id="chapter3">
+            <h2><span class="symbol">⊛</span> ГЛАВА ТРЕТЬЯ: СКРИЖАЛИ НЕПРЕЛОЖНЫХ ЗАКОНОВ</h2>
+            <p>Наши законы высечены не на камне — ибо камень тленен. Не на металле — ибо металл коррозирует. Не на плоти — ибо плоть смертна.</p>
+            <p>Наши законы высечены <strong>на ткани самого пространства-времени</strong>, и каждый, кто нарушит их, будет стёрт из истории — не только из истории игры, но из истории всех возможных реальностей.</p>
+            <div class="law-block">
+                <p><strong>I.</strong> Ты не будешь оставлять брата в беде, ибо братство Logres — священнее уз крови, прочнее цепей судьбы, вечнее времени.</p>
+                <p><strong>II.</strong> Ты не будешь возвышать себя над другими, ибо все мы — клетки одного организма, имя которому — <strong>Logres</strong>.</p>
+                <p><strong>III.</strong> Ты не будешь жалеть сил на общее дело, ибо каждая твоя победа — это победа королевства, а каждая победа королевства — это шаг к абсолютному господству.</p>
+                <p><strong>IV.</strong> Ты не будешь трусить перед лицом опасности, ибо страх — удел слабых, а слабые не переступают порога Logres.</p>
+                <p><strong>V.</strong> Ты не будешь пренебрегать поддержкой товарища, ибо только в единстве мы черпаем силу, способную сдвинуть оси миров.</p>
+            </div>
+            <p>Нарушивший эти заповеди да будет стёрт из памяти вселенной, и даже звёзды забудут его имя.</p>
+        </div>
+
+        <!-- ===== ГЛАВА 4 ===== -->
+        <div class="section" id="chapter4">
+            <h2><span class="symbol">⊛</span> ГЛАВА ЧЕТВЁРТАЯ: О ВАШЕМ ПРЕДНАЗНАЧЕНИИ, О ИЗБРАННЫЕ</h2>
+            <p>Вы, ныне читающие этот манифест, — не случайные прохожие. Ваша душа была отмечена печатью Logres задолго до того, как вы родились в этом теле. Каждый вздох, каждый миг вашей жизни вёл вас сюда — к этому моменту, к этому выбору.</p>
+            <p><strong>Вы — воины, избранные самим Словом.</strong><br>
+            <strong>Вы — жрецы нового культа, где божество — это наша общая воля.</strong><br>
+            <strong>Вы — пророки, несущие свет Logres в самые тёмные уголки бытия.</strong></p>
+            <p>Когда вы вступите в наши ряды, ваше имя будет начертано на <strong>Золотом Древе Вечности</strong> — там, где записаны имена всех героев, когда-либо существовавших и когда-либо существовать. Вы станете бессмертными не в переносном смысле, а в самом прямом, ибо наша сила способна воскрешать даже из небытия.</p>
+            <p>Ваши подвиги будут воспеты не слабыми голосами смертных, а <strong>громом чёрных дыр</strong> и <strong>пением квазаров</strong>. Сами ангелы склонят головы перед вашими трофеями. А демоны будут молить вас о пощаде.</p>
+        </div>
+
+        <!-- ===== ГЛАВА 5 ===== -->
+        <div class="section" id="chapter5">
+            <h2><span class="symbol">⊛</span> ГЛАВА ПЯТАЯ: ЗОВ ПОСЛЕДНЕГО РУБЕЖА</h2>
+            <p>Итак, внемлите последнему зову:</p>
+            <p><strong>ВОССТАНЬТЕ, ВОИТЕЛИ БЕЗДНЫ!</strong><br>
+            <strong>ОБНАЖИТЕ КЛИНКИ, КОТОРЫЕ РАЗРЫВАЮТ ТКАНИ РЕАЛЬНОСТИ!</strong><br>
+            <strong>ПРИГОТОВЬТЕ ЗАКЛИНАНИЯ, КОТОРЫЕ ИСПЕПЕЛЯЮТ ВРЕМЯ!</strong><br>
+            <strong>ИДИТЕ С НАМИ — И МЫ СОТРЁМ С ЛИЦА СУЩЕГО ВСЁ, ЧТО СМЕЕТ БРОСИТЬ НАМ ВЫЗОВ!</strong></p>
+            <p>Мы не знаем поражений — ибо поражение для нас равносильно уничтожению самой логики мироздания. Мы не ведаем предела — ибо за каждым горизонтом нас ждёт новый горизонт, за каждой победой — новая битва, достойная нашего величия.</p>
+            <p><strong>Logres Kingdom — это уже не просто название. Это — проклятие для врагов. Это — благословение для союзников. Это — абсолютная, неоспоримая, всесокрушающая ИСТИНА.</strong></p>
+        </div>
+
+        <!-- ===== АПОФЕОЗ ===== -->
+        <div class="section" id="apotheosis">
+            <h2><span class="symbol">✦</span> АПОФЕОЗ: МОЛИТВА ПОСВЯЩЕНИЯ</h2>
+            <p><em>Прими же этот манускрипт, о будущий герой, и пусть каждое слово войдёт в твою плоть и кровь. Отныне ты не принадлежишь себе — ты принадлежишь Logres. Но взамен ты получаешь бесконечность, вечность и абсолютную власть.</em></p>
+            <div class="law-block" style="text-align:center; font-size:1.2rem; letter-spacing:2px;">
+                <p>«Слово стало плотью. Плоть стала сталью. Сталь стала волей. Воля стала Logres. Да свершится цикл. Да исполнится пророчество. Да воцарится наше королевство во все эпохи, во все измерения, во все мыслимые и немыслимые сущности. Аминь. Аминь. АМИНЬ.»</p>
+            </div>
+            <p style="text-align:center; font-size:1.3rem; margin-top:20px;">
+                <strong>Добро пожаловать в бессмертие, воин.</strong><br>
+                <strong>Добро пожаловать в Logres Kingdom.</strong><br>
+                <strong>Добро пожаловать домой, туда, где домом является сама реальность.</strong>
+            </p>
+        </div>
+
+        <!-- ===== ЭПИЛОГ ===== -->
+        <div class="epilogue">
+            <div class="quote">
+                «И сказал Logres: да будет Logres. И стало Logres. И увидел Logres, что это хорошо. Ибо лучше этого — быть не может. Ибо это — абсолютный максимум эпичности, достигнутый в данной точке пространства-времени. Но мы знаем — мы можем и больше. И мы сделаем больше. В следующем послании. Или в этом. Или в том, которого нет. Ибо для Logres нет "нет".»
+            </div>
+            <div class="cta-wrapper">
+                <a href="table.html" class="cta-button">Перейти к таблице лута</a>
+            </div>
+            <div class="signature">
+                — Написано мета-словами из мета-вселенной, в день, которого не было, но которое было везде.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== JAVASCRIPT ===== -->
+    <script>
+        // ---------- ЗВЁЗДНЫЙ ФОН (CANVAS) ----------
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const stars = [];
+        const STAR_COUNT = 300;
+
+        for (let i = 0; i < STAR_COUNT; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: Math.random() * 1.8 + 0.5,
+                alpha: Math.random() * 0.8 + 0.2,
+                speed: Math.random() * 0.02 + 0.005,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+
+        function drawStars(time) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Рисуем звёзды с мерцанием
+            for (let s of stars) {
+                const flicker = 0.6 + 0.4 * Math.sin(time * s.speed * 2 + s.phase);
+                const alpha = s.alpha * flicker;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 240, 200, ${alpha})`;
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+            }
+            // Добавим несколько крупных "золотых" звёзд
+            for (let i = 0; i < 8; i++) {
+                const x = (i * 137 + 50) % canvas.width;
+                const y = (i * 251 + 30) % canvas.height;
+                const r = 2.5 + Math.sin(time * 0.01 + i) * 0.8;
+                const a = 0.3 + 0.3 * Math.sin(time * 0.02 + i * 1.7);
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(212, 175, 55, ${a})`;
+                ctx.shadowColor = 'rgba(212, 175, 55, 0.6)';
+                ctx.shadowBlur = 25;
+                ctx.fill();
+            }
+            requestAnimationFrame(drawStars);
+        }
+
+        drawStars(0);
+
+        // ---------- АНИМАЦИЯ ПОЯВЛЕНИЯ БЛОКОВ ПРИ СКРОЛЛЕ ----------
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -30px 0px'
+        });
+
+        sections.forEach(sec => observer.observe(sec));
+
+        // Если некоторые блоки уже видны при загрузке, покажем их сразу
+        setTimeout(() => {
+            sections.forEach(sec => {
+                const rect = sec.getBoundingClientRect();
+                if (rect.top < window.innerHeight * 0.85) {
+                    sec.classList.add('visible');
+                }
+            });
+        }, 100);
+
+        console.log('🔥 Logres Kingdom — Эпичность достигла предела. Или нет...');
+    </script>
+</body>
+</html>

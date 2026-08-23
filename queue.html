@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Очереди — Logres Kingdom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЗВЁЗДНОЕ ПОЛОТНО -->
+    <canvas id="starfield"></canvas>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="content">
+        <!-- НАВИГАЦИЯ -->
+        <nav class="nav-bar">
+            <a href="index.html">📜 Манифест</a>
+            <a href="table.html">⚔️ Таблица лута</a>
+            <a href="queue.html">🐉 Очереди</a>
+            <a href="admin.html">🏛️ Админка</a>
+        </nav>
+
+        <!-- ЗАГОЛОВОК -->
+        <div class="page-title">
+            <h1>🐉 Очередь на получение артефактов</h1>
+            <div class="quote">«И воссядут первые, и последние станут первыми... но только после заморозки»</div>
+        </div>
+
+        <!-- КОНТЕНТ ОЧЕРЕДЕЙ -->
+        <div id="queueContent">
+            <p style="text-align: center; color: #8f8060; margin-bottom: 30px;">
+                Здесь решается, кто достоин артефакта, а кто будет ждать следующего перерождения
+            </p>
+            <div id="queuesContainer"></div>
+        </div>
+    </div>
+
+    <!-- СКРИПТЫ -->
+    <script src="script.js"></script>
+    <script>
+        let currentData = null;
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initStarfield();
+            await loadData();
+        });
+
+        // ===== ЗВЁЗДНЫЙ ФОН =====
+        async function initStarfield() {
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            const stars = [];
+            const STAR_COUNT = 300;
+
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.8 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    speed: Math.random() * 0.02 + 0.005,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let s of stars) {
+                    const flicker = 0.6 + 0.4 * Math.sin(time * s.speed * 2 + s.phase);
+                    const alpha = s.alpha * flicker;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 240, 200, ${alpha})`;
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                }
+
+                for (let i = 0; i < 8; i++) {
+                    const x = (i * 137 + 50) % canvas.width;
+                    const y = (i * 251 + 30) % canvas.height;
+                    const r = 2.5 + Math.sin(time * 0.01 + i) * 0.8;
+                    const a = 0.3 + 0.3 * Math.sin(time * 0.02 + i * 1.7);
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(212, 175, 55, ${a})`;
+                    ctx.shadowColor = 'rgba(212, 175, 55, 0.6)';
+                    ctx.shadowBlur = 25;
+                    ctx.fill();
+                }
+                requestAnimationFrame(drawStars);
+            }
+
+            drawStars(0);
+        }
+
+        // ===== ЗАГРУЗКА ДАННЫХ =====
+        async function loadData() {
+            currentData = await getData();
+            if (!currentData) return;
+
+            renderQueues();
+        }
+
+        // ===== РЕНДЕР ОЧЕРЕДЕЙ =====
+        function renderQueues() {
+            const container = document.getElementById('queuesContainer');
+            let html = '';
+
+            Object.keys(currentData.bosses).forEach(bossKey => {
+                const boss = currentData.bosses[bossKey];
+                
+                html += `<div class="queue-section">`;
+                html += `<h3>⚔️ ${boss.name}</h3>`;
+
+                boss.items.forEach(item => {
+                    const itemId = `${bossKey}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    
+                    // Получаем отсортированную очередь
+                    const queue = getSortedQueue(
+                        currentData.bids || {},
+                        itemId,
+                        currentData.members || [],
+                        currentData.freezes || []
+                    );
+
+                    html += `<div style="margin-bottom: 20px;">`;
+                    html += `<h4 style="color: #f0d080; margin-bottom: 10px; font-size: 1.1rem;">${item}</h4>`;
+                    html += `<ul class="queue-list">`;
+
+                    if (queue.length === 0) {
+                        html += `<li style="color: #8f8060; padding: 10px;">Нет заявок</li>`;
+                    } else {
+                        queue.forEach((entry, index) => {
+                            const frozenClass = entry.frozen ? 'frozen' : '';
+                            const frozenBadge = entry.frozen ? '<span class="frozen-badge">❄</span>' : '';
+                            const rank = index + 1;
+
+                            html += `
+                                <li class="queue-item ${frozenClass}">
+                                    <div style="display: flex; align-items: center; flex: 1;">
+                                        <span class="rank">${rank}.</span>
+                                        <span class="name">${frozenBadge}${entry.nick}</span>
+                                        <span class="score">${entry.points > 0 ? entry.points + ' очков' : '-'}</span>
+                                    </div>
+                                    <div>
+                                        ${entry.frozen 
+                                            ? `<button class="btn-small" onclick="toggleFreeze('${entry.nick}', false)">Да снимет печать</button>`
+                                            : `<button class="btn-small" onclick="toggleFreeze('${entry.nick}', true)">Да скрепит печать</button>`
+                                        }
+                                    </div>
+                                </li>
+                            `;
+                        });
+                    }
+
+                    html += `</ul>`;
+                    html += `</div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ===== ЗАМОРОЗКА/РАЗМОРОЗКА =====
+        async function toggleFreeze(nick, freeze) {
+            if (!currentData.freezes) currentData.freezes = [];
+
+            if (freeze) {
+                // Добавляем в замороженные
+                if (!currentData.freezes.some(f => f.toLowerCase() === nick.toLowerCase())) {
+                    currentData.freezes.push(nick);
+                    showNotification(`❄ Печать наложена. Дух закован в цепи до снятия оной.`);
+                }
+            } else {
+                // Удаляем из замороженных
+                currentData.freezes = currentData.freezes.filter(
+                    f => f.toLowerCase() !== nick.toLowerCase()
+                );
+                showNotification(`✨ Цепи пали. Дух вновь свободен для свершений.`);
+            }
+
+            // Сохраняем изменения
+            const success = await saveData(currentData);
+            if (success) {
+                await loadData(); // Перезагружаем данные
+            }
+        }
+    </script>
+</body>
+</html>

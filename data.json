@@ -1,0 +1,33 @@
+{
+  "members": [],
+  "bosses": {
+    "daigon": {
+      "name": "Дайгон",
+      "items": [
+        "Daigon's Stormblade",
+        "Daigon's Charred Emberstaff"
+      ]
+    },
+    "leviathan": {
+      "name": "Левиафан",
+      "items": [
+        "Leviathan's Bloodstorm Longbow",
+        "Leviathan's Bladed Tendrils"
+      ]
+    },
+    "pakilo": {
+      "name": "Пакило Нару",
+      "items": [
+        "Spectral Overseer's Tunic"
+      ]
+    },
+    "manticus": {
+      "name": "Мантикусы",
+      "items": [
+        "Manticus Fraternal Core"
+      ]
+    }
+  },
+  "bids": {},
+  "freezes": []
+}

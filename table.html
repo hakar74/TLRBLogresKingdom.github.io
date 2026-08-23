@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Скрижали лута — Logres Kingdom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЗВЁЗДНОЕ ПОЛОТНО -->
+    <canvas id="starfield"></canvas>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="content">
+        <!-- НАВИГАЦИЯ -->
+        <nav class="nav-bar">
+            <a href="index.html">📜 Манифест</a>
+            <a href="table.html">⚔️ Таблица лута</a>
+            <a href="queue.html">🐉 Очереди</a>
+            <a href="admin.html">🏛️ Админка</a>
+        </nav>
+
+        <!-- ЗАГОЛОВОК -->
+        <div class="page-title">
+            <h1>⚔️ Скрижали лута Logres Kingdom</h1>
+            <div class="quote">«И каждый получит то, что заслужил... или то, что сможет вымолить у звёзд»</div>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО ВХОДА -->
+        <div id="loginModal" class="modal-overlay">
+            <div class="modal">
+                <h2>🔮 Введи свой игровой ник</h2>
+                <p style="margin-bottom: 20px; color: #bfa67a;">Дабы узреть свою судьбу в анналах Logres</p>
+                <input type="text" id="nickInput" placeholder="Твой никнейм..." autocomplete="off">
+                <div id="loginError" class="modal-error">Твой дух не отмечен печатью Logres. Обратись к архимагу (админу).</div>
+                <button class="btn-epic" onclick="attemptLogin()">Войти</button>
+            </div>
+        </div>
+
+        <!-- КОНТЕНТ ТАБЛИЦЫ (скрыт до входа) -->
+        <div id="tableContent" style="display: none;">
+            <!-- ТАБЫ -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('daigon')">Дайгон</button>
+                <button class="tab-btn" onclick="switchTab('leviathan')">Левиафан</button>
+                <button class="tab-btn" onclick="switchTab('pakilo')">Пакило Нару</button>
+                <button class="tab-btn" onclick="switchTab('manticus')">Мантикусы</button>
+            </div>
+
+            <!-- ВКЛАДКИ С ТАБЛИЦАМИ -->
+            <div id="daigon" class="tab-content active"></div>
+            <div id="leviathan" class="tab-content"></div>
+            <div id="pakilo" class="tab-content"></div>
+            <div id="manticus" class="tab-content"></div>
+
+            <!-- КНОПКА СОХРАНЕНИЯ -->
+            <div class="btn-wrapper">
+                <button class="btn-epic" onclick="saveBids()">✍️ Вписать в Книгу Судеб</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- СКРИПТЫ -->
+    <script src="script.js"></script>
+    <script>
+        // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+        let currentData = null;
+        let currentNick = null;
+        let localBids = {}; // Локальные изменения до сохранения
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initStarfield();
+            await loadData();
+        });
+
+        // ===== ЗВЁЗДНЫЙ ФОН =====
+        async function initStarfield() {
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            const stars = [];
+            const STAR_COUNT = 300;
+
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.8 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    speed: Math.random() * 0.02 + 0.005,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let s of stars) {
+                    const flicker = 0.6 + 0.4 * Math.sin(time * s.speed * 2 + s.phase);
+                    const alpha = s.alpha * flicker;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 240, 200, ${alpha})`;
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                }
+
+                for (let i = 0; i < 8; i++) {
+                    const x = (i * 137 + 50) % canvas.width;
+                    const y = (i * 251 + 30) % canvas.height;
+                    const r = 2.5 + Math.sin(time * 0.01 + i) * 0.8;
+                    const a = 0.3 + 0.3 * Math.sin(time * 0.02 + i * 1.7);
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(212, 175, 55, ${a})`;
+                    ctx.shadowColor = 'rgba(212, 175, 55, 0.6)';
+                    ctx.shadowBlur = 25;
+                    ctx.fill();
+                }
+                requestAnimationFrame(drawStars);
+            }
+
+            drawStars(0);
+        }
+
+        // ===== ЗАГРУЗКА ДАННЫХ =====
+        async function loadData() {
+            currentData = await getData();
+            if (!currentData) return;
+
+            // Инициализируем localBids текущими данными
+            localBids = JSON.parse(JSON.stringify(currentData.bids || {}));
+        }
+
+        // ===== ВХОД =====
+        function attemptLogin() {
+            const nick = document.getElementById('nickInput').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (!nick) {
+                errorEl.textContent = 'Впиши свой ник, дабы продолжить...';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            // Проверяем наличие ника в списке участников (регистронезависимо)
+            const memberExists = currentData.members.some(
+                m => m.toLowerCase() === nick.toLowerCase()
+            );
+
+            if (!memberExists) {
+                errorEl.textContent = 'Твой дух не отмечен печатью Logres. Обратись к архимагу (админу).';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            // Успешный вход
+            currentNick = nick;
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('tableContent').style.display = 'block';
+
+            showNotification('Да воссияет твой ник в Книге Судеб!');
+
+            // Рендерим таблицы
+            renderAllTabs();
+        }
+
+        // ===== ПЕРЕКЛЮЧЕНИЕ ТАБОВ =====
+        function switchTab(bossKey) {
+            // Убираем активный класс со всех кнопок и контента
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Добавляем активный класс выбранному
+            event.target.classList.add('active');
+            document.getElementById(bossKey).classList.add('active');
+        }
+
+        // ===== РЕНДЕР ВСЕХ ТАБЛИЦ =====
+        function renderAllTabs() {
+            Object.keys(currentData.bosses).forEach(bossKey => {
+                renderTable(bossKey);
+            });
+        }
+
+        // ===== РЕНДЕР ТАБЛИЦЫ =====
+        function renderTable(bossKey) {
+            const boss = currentData.bosses[bossKey];
+            const container = document.getElementById(bossKey);
+
+            // Сортируем участников по алфавиту
+            const sortedMembers = [...currentData.members].sort((a, b) => 
+                a.localeCompare(b, 'ru')
+            );
+
+            // Создаём HTML таблицы
+            let html = `
+                <div class="table-container">
+                    <table class="loot-table">
+                        <thead>
+                            <tr>
+                                <th>Воин</th>
+                                ${boss.items.map(item => `<th>${item}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            sortedMembers.forEach(member => {
+                const frozen = isFrozen(member, currentData.freezes || []);
+                
+                html += `<tr>`;
+                
+                // Столбец с ником
+                if (frozen) {
+                    html += `<td>❄ ${member}</td>`;
+                } else {
+                    html += `<td>${member}</td>`;
+                }
+
+                // Столбцы с предметами
+                boss.items.forEach(item => {
+                    const itemId = `${bossKey}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const bidValue = localBids[itemId]?.[member] || '';
+                    
+                    // Только текущий пользователь может редактировать свои ячейки
+                    const isCurrentUser = member.toLowerCase() === currentNick.toLowerCase();
+                    const disabled = !isCurrentUser || frozen ? 'disabled' : '';
+                    
+                    if (frozen && isCurrentUser) {
+                        html += `<td class="frozen-cell">❄ Заковано</td>`;
+                    } else if (isCurrentUser) {
+                        html += `
+                            <td>
+                                <input type="number" 
+                                       min="0" 
+                                       max="999999" 
+                                       value="${bidValue}" 
+                                       data-item="${itemId}" 
+                                       data-member="${member}"
+                                       onchange="updateBid(this)"
+                                       ${disabled}>
+                            </td>
+                        `;
+                    } else {
+                        html += `<td>${bidValue || ''}</td>`;
+                    }
+                });
+
+                html += `</tr>`;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // ===== ОБНОВЛЕНИЕ ЗАЯВКИ =====
+        function updateBid(input) {
+            const itemId = input.dataset.item;
+            const member = input.dataset.member;
+            const value = parseInt(input.value) || 0;
+
+            if (!localBids[itemId]) localBids[itemId] = {};
+            
+            if (value > 0) {
+                localBids[itemId][member] = value;
+            } else {
+                delete localBids[itemId][member];
+            }
+        }
+
+        // ===== СОХРАНЕНИЕ ЗАЯВОК =====
+        async function saveBids() {
+            // Обновляем данные
+            currentData.bids = localBids;
+
+            // Сохраняем на GitHub
+            const success = await saveData(currentData);
+
+            if (success) {
+                showNotification('✨ Твои заявки вознесены к звёздам!');
+                // Обновляем локальные данные
+                loadData();
+            }
+        }
+
+        // Обработка Enter в поле ввода ника
+        document.getElementById('nickInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+    </script>
+</body>
+</html>
